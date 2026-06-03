@@ -1,0 +1,54 @@
+[project]
+name = "researcher-ai-agent"
+version = "0.1.0"
+description = "Multi-agent system for analytical Q&A over a fixed corpus of ML arXiv papers."
+requires-python = ">=3.12"
+readme = "README.md"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "pydantic>=2.8.0",
+    "pydantic-settings>=2.4.0",
+    "sqlalchemy[asyncio]>=2.0.30",
+    "aiosqlite>=0.20.0",
+    "chromadb>=0.5.5",
+    "google-generativeai>=0.8.0",
+    "httpx>=0.27.0",
+    "pypdf>=4.3.0",
+    "structlog>=24.4.0",
+    "tenacity>=9.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-mock>=3.14.0",
+    "ruff>=0.6.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC", "SIM"]
+# B008: FastAPI uses `Depends(...)` as default arg by design.
+# UP046: type-parameter PEP 695 syntax not yet universal in tooling.
+# ASYNC230/240: scripts intentionally use blocking file I/O (run once at setup).
+ignore = ["E501", "B008", "UP046", "ASYNC230", "ASYNC240"]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["ASYNC230", "ASYNC240"]

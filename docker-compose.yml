@@ -1,0 +1,44 @@
+services:
+  chroma:
+    image: chromadb/chroma:0.5.5
+    container_name: researcher-chroma
+    restart: unless-stopped
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    volumes:
+      - chroma_data:/chroma/chroma
+    ports:
+      - "8001:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: researcher-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - SQLITE_PATH=/data/sqlite/app.db
+      - PDF_DIR=/data/pdfs
+    depends_on:
+      chroma:
+        condition: service_healthy
+    volumes:
+      - sqlite_data:/data/sqlite
+      - pdf_data:/data/pdfs
+    ports:
+      - "${API_PORT:-8080}:8080"
+
+volumes:
+  chroma_data:
+  sqlite_data:
+  pdf_data:
