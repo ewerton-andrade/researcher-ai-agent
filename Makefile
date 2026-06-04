@@ -3,7 +3,7 @@ SHELL := /bin/bash
 COMPOSE ?= docker compose
 API_URL ?= http://localhost:$${API_PORT:-8080}
 
-.PHONY: help setup build up ingest run test down logs lint clean
+.PHONY: help setup build up ingest run test down logs lint clean frontend-install frontend-dev frontend-build
 
 help:
 	@echo "Targets:"
@@ -14,6 +14,9 @@ help:
 	@echo "  logs    - tail container logs"
 	@echo "  lint    - run ruff inside the api container"
 	@echo "  clean   - down + remove named volumes"
+	@echo "  frontend-install - install frontend dependencies"
+	@echo "  frontend-dev     - start frontend dev server (port 5173)"
+	@echo "  frontend-build   - build frontend for production"
 
 .env:
 	@if [ ! -f .env ]; then cp .env.example .env && echo "Created .env from .env.example - edit GOOGLE_API_KEY before running."; fi
@@ -57,3 +60,12 @@ lint:
 
 clean:
 	$(COMPOSE) down -v
+
+frontend-install:
+	cd frontend && npm install
+
+frontend-dev:
+	cd frontend && npm run dev
+
+frontend-build:
+	cd frontend && npm run build

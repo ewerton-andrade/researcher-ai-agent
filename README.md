@@ -94,7 +94,7 @@ cp .env.example .env
 # 3. Bring everything up + download PDFs + ingest into ChromaDB
 make setup
 
-# 4. Run the 5 evaluation questions through the API
+# 4. Run the 5 evaluation questions through the API (Can use UI to test, see 6. section of this README.md)
 make run
 
 # 5. Tests (unit + integration)
@@ -158,3 +158,36 @@ The same machinery drives both leaf agents (where the bindings are `Tool` instan
 - **No CI workflow files** — only the local `make test` target is provided.
 - **The integration test scripts the Gemini chat loop** to keep tests offline; a true live-API smoke test would require a real key and is left to `make run`.
 - **Cross-thread isolation** is enforced by `thread_id` foreign keys but no row-level security / per-user separation is implemented.
+
+---
+
+## 6. Simple frontend chat (React + TypeScript)
+
+A minimal chat UI is available in `frontend/` so you can ask questions and inspect answers like a chat model.
+
+### Run
+
+```bash
+# 1) Start backend stack (API + Chroma)
+make setup
+
+# 2) Install frontend deps once
+make frontend-install
+
+# 3) Start frontend dev server
+make frontend-dev
+```
+
+Open **http://localhost:5173**.
+
+### How to test
+
+1. Open the page and wait for auto thread creation.
+2. Type a question in the text area and send.
+3. Read the model answer in the same thread.
+4. Send a follow-up question to validate context continuity.
+
+### Notes
+
+- Frontend calls the same API endpoints: `POST /threads`, `GET /threads/{id}/messages`, `POST /threads/{id}/messages`.
+- CORS is configurable through `.env`: `CORS_ALLOW_ORIGINS=http://localhost:5173` (supports comma-separated values).

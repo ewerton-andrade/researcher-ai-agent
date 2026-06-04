@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,9 +35,17 @@ class Settings(BaseSettings):
     # API
     api_port: int = Field(default=8080)
     log_level: str = Field(default="INFO")
+    cors_allow_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
 
     # Agent runtime
     agent_max_steps: int = Field(default=8, ge=1, le=32)
+
+    @field_validator("cors_allow_origins", mode="before")
+    @classmethod
+    def _parse_cors_allow_origins(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
 
     @property
     def sqlalchemy_url(self) -> str:
