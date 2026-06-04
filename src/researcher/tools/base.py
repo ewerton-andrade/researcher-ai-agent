@@ -5,7 +5,7 @@ from __future__ import annotations
 import abc
 from typing import Any, Generic, TypeVar
 
-from google.generativeai.types import FunctionDeclaration
+from google.genai import types
 from pydantic import BaseModel, ValidationError
 
 from researcher.core.models import ToolResult
@@ -39,11 +39,11 @@ class Tool(abc.ABC, Generic[InputT, OutputT]):
             return ToolResult(ok=False, error=str(exc))
         return ToolResult(ok=True, data=output)
 
-    def function_declaration(self) -> FunctionDeclaration:
+    def function_declaration(self) -> types.FunctionDeclaration:
         """Render this tool as a Gemini `FunctionDeclaration`."""
 
         schema = _sanitize_schema(self.InputModel.model_json_schema())
-        return FunctionDeclaration(
+        return types.FunctionDeclaration(
             name=self.name,
             description=self.description,
             parameters=schema,
@@ -77,6 +77,8 @@ def _sanitize_schema(schema: dict[str, Any]) -> dict[str, Any]:
             for key, value in node.items():
                 if key in _ALLOWED_KEYS:
                     cleaned[key] = _walk(value)
+            if "type" in cleaned and isinstance(cleaned["type"], str):
+                cleaned["type"] = cleaned["type"].upper()
             return cleaned
         if isinstance(node, list):
             return [_walk(item) for item in node]

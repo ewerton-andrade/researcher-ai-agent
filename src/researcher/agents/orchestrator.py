@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from google.generativeai.types import FunctionDeclaration
+from google.genai import types
 
 from researcher.agents.analyst_agent import AnalystAgent
 from researcher.agents.rag_agent import RAGAgent
@@ -29,15 +29,15 @@ Workflow:
 """
 
 
-def _ask_agent_declaration(name: str, description: str, arg: str) -> FunctionDeclaration:
-    return FunctionDeclaration(
+def _ask_agent_declaration(name: str, description: str, arg: str) -> types.FunctionDeclaration:
+    return types.FunctionDeclaration(
         name=name,
         description=description,
         parameters={
-            "type": "object",
+            "type": "OBJECT",
             "properties": {
                 arg: {
-                    "type": "string",
+                    "type": "STRING",
                     "description": "Self-contained question or task in natural language.",
                 }
             },

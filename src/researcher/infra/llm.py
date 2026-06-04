@@ -15,14 +15,8 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 
-import google.generativeai as genai
-from google.generativeai.types import (
-    FunctionDeclaration,
-    GenerateContentResponse,
-)
-from google.generativeai.types import (
-    Tool as GenAITool,
-)
+from google import genai
+from google.genai import types
 
 from researcher.core.logging import get_logger
 from researcher.core.models import ToolCallTrace
@@ -38,7 +32,7 @@ ToolExecutor = Callable[[str, dict[str, Any]], Awaitable[Any]]
 class ToolBinding:
     """Pairs a Gemini `FunctionDeclaration` with the coroutine that runs it."""
 
-    declaration: FunctionDeclaration
+    declaration: types.FunctionDeclaration
     executor: ToolExecutor
 
 
@@ -63,15 +57,9 @@ class GeminiChat:
         self._bindings = {b.declaration.name: b for b in (bindings or [])}
         self._max_steps = max_steps
 
-        tools: list[GenAITool] | None = None
-        if self._bindings:
-            tools = [GenAITool(function_declarations=[b.declaration for b in bindings or []])]
-
-        self._model = genai.GenerativeModel(
-            model_name=model_name,
-            system_instruction=system_instruction,
-            tools=tools,
-        )
+        self._tools: list[types.Tool] | None = None
+        if bindings:
+            self._tools = [types.Tool(function_declarations=[b.declaration for b in bindings])]
 
     async def generate_text(
         self,
@@ -152,14 +140,23 @@ class GeminiChat:
             trace.append(ToolCallTrace(tool=name, arguments=args, ok=False, error=str(exc)))
             return {"error": str(exc)}
 
-    async def _generate(self, contents: list[dict[str, Any]]) -> GenerateContentResponse:
-        def _call() -> GenerateContentResponse:
-            return self._model.generate_content(contents)
+    async def _generate(self, contents: list[dict[str, Any]]) -> types.GenerateContentResponse:
+        config = types.GenerateContentConfig(
+            system_instruction=self._system_instruction,
+            tools=self._tools,
+        )
+
+        def _call() -> types.GenerateContentResponse:
+            return get_genai_client().models.generate_content(
+                model=self._model_name,
+                contents=contents,
+                config=config,
+            )
 
         return await asyncio.to_thread(_call)
 
 
-def _extract_text(response: GenerateContentResponse) -> str:
+def _extract_text(response: types.GenerateContentResponse) -> str:
     parts: list[str] = []
     for candidate in response.candidates or []:
         for part in candidate.content.parts or []:
@@ -169,7 +166,7 @@ def _extract_text(response: GenerateContentResponse) -> str:
     return "\n".join(parts).strip()
 
 
-def _extract_function_calls(response: GenerateContentResponse) -> list[tuple[str, dict[str, Any]]]:
+def _extract_function_calls(response: types.GenerateContentResponse) -> list[tuple[str, dict[str, Any]]]:
     calls: list[tuple[str, dict[str, Any]]] = []
     for candidate in response.candidates or []:
         for part in candidate.content.parts or []:
@@ -190,5 +187,15 @@ def _json_safe(value: Any) -> Any:
         return json.loads(json.dumps(value, default=str))
 
 
+_client: genai.Client | None = None
+
+
+def get_genai_client() -> genai.Client:
+    if _client is None:
+        raise RuntimeError("configure_genai() must be called before using Gemini")
+    return _client
+
+
 def configure_genai(settings: Settings) -> None:
-    genai.configure(api_key=settings.google_api_key)
+    global _client
+    _client = genai.Client(api_key=settings.google_api_key)

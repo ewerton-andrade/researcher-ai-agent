@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import asyncio
 
-import google.generativeai as genai
+from google.genai import types
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from researcher.core.logging import get_logger
 from researcher.core.settings import Settings
+from researcher.infra.llm import get_genai_client
 
 logger = get_logger(__name__)
 
@@ -22,20 +23,15 @@ class EmbeddingClient:
 
     @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=1, max=20))
     async def _embed_batch(self, texts: list[str], task_type: str) -> list[list[float]]:
-        # `embed_content` is sync in google-generativeai; run in a worker thread
-        # to keep the surrounding code async.
+        # `models.embed_content` is sync; run in a worker thread to stay async.
         def _call() -> list[list[float]]:
-            resp = genai.embed_content(
-                model=f"models/{self._model}" if not self._model.startswith("models/") else self._model,
-                content=texts,
-                task_type=task_type,
+            model = self._model if self._model.startswith("models/") else f"models/{self._model}"
+            resp = get_genai_client().models.embed_content(
+                model=model,
+                contents=texts,
+                config=types.EmbedContentConfig(task_type=task_type.upper()),
             )
-            embeddings = resp["embedding"]
-            # When `content` is a list, the response is `{'embedding': [[...], [...], ...]}`.
-            # When it is a single string, it is `{'embedding': [...]}`. Normalize here.
-            if embeddings and isinstance(embeddings[0], float):
-                return [embeddings]  # type: ignore[list-item]
-            return embeddings  # type: ignore[return-value]
+            return [list(e.values) for e in resp.embeddings]
 
         return await asyncio.to_thread(_call)
 
@@ -56,5 +52,4 @@ class EmbeddingClient:
 
 
 def build_embedding_client(settings: Settings) -> EmbeddingClient:
-    genai.configure(api_key=settings.google_api_key)
     return EmbeddingClient(model=settings.embedding_model)
