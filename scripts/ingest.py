@@ -13,6 +13,7 @@ from researcher.core.logging import configure_logging, get_logger
 from researcher.core.papers import PAPERS, PaperRef
 from researcher.core.settings import Settings, get_settings
 from researcher.infra.embeddings import EmbeddingClient, build_embedding_client
+from researcher.infra.llm import configure_genai
 from researcher.infra.vector_store import VectorStore
 
 logger = get_logger(__name__)
@@ -184,6 +185,7 @@ async def _ingest_paper(
 async def main() -> None:
     settings = get_settings()
     configure_logging(settings.log_level)
+    configure_genai(settings)
     embeddings = build_embedding_client(settings)
     store = await VectorStore.connect(settings)
 
