@@ -30,6 +30,7 @@ setup: .env build up
 	  if curl -sf $(API_URL)/health >/dev/null 2>&1; then echo "API is up."; break; fi; \
 	  sleep 2; \
 	done
+	@curl -sf $(API_URL)/health >/dev/null 2>&1 || (echo "ERROR: API health check timed out after 60 s" && exit 1)
 	@echo ">>> Downloading PDFs..."
 	$(COMPOSE) exec -T api python scripts/download_papers.py
 	@echo ">>> Ingesting into ChromaDB..."
