@@ -75,7 +75,11 @@ def _sanitize_schema(schema: dict[str, Any]) -> dict[str, Any]:
                 return _walk(merged)
             cleaned: dict[str, Any] = {}
             for key, value in node.items():
-                if key in _ALLOWED_KEYS:
+                if key not in _ALLOWED_KEYS:
+                    continue
+                if key == "properties" and isinstance(value, dict):
+                    cleaned[key] = {pname: _walk(pschema) for pname, pschema in value.items()}
+                else:
                     cleaned[key] = _walk(value)
             if "type" in cleaned and isinstance(cleaned["type"], str):
                 cleaned["type"] = cleaned["type"].upper()

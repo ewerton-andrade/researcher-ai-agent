@@ -17,6 +17,8 @@ from typing import Any
 
 from google import genai
 from google.genai import types
+from google.genai.errors import APIError
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from researcher.core.logging import get_logger
 from researcher.core.models import ToolCallTrace
@@ -26,6 +28,10 @@ logger = get_logger(__name__)
 
 
 ToolExecutor = Callable[[str, dict[str, Any]], Awaitable[Any]]
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    return isinstance(exc, APIError) and getattr(exc, "code", None) in {429, 500, 503}
 
 
 @dataclass(slots=True)
@@ -140,6 +146,12 @@ class GeminiChat:
             trace.append(ToolCallTrace(tool=name, arguments=args, ok=False, error=str(exc)))
             return {"error": str(exc)}
 
+    @retry(
+        retry=retry_if_exception(_is_retryable),
+        stop=stop_after_attempt(6),
+        wait=wait_exponential(multiplier=2, min=4, max=60),
+        reraise=True,
+    )
     async def _generate(self, contents: list[dict[str, Any]]) -> types.GenerateContentResponse:
         config = types.GenerateContentConfig(
             system_instruction=self._system_instruction,
