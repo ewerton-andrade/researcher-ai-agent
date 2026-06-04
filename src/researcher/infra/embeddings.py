@@ -21,7 +21,7 @@ class EmbeddingClient:
         self._model = model
         self._batch_size = batch_size
 
-    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=1, max=20))
+    @retry(stop=stop_after_attempt(8), wait=wait_exponential(multiplier=2, min=4, max=60))
     async def _embed_batch(self, texts: list[str], task_type: str) -> list[list[float]]:
         # `models.embed_content` is sync; run in a worker thread to stay async.
         def _call() -> list[list[float]]:

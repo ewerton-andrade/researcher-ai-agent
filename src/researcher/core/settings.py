@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # LLM
     google_api_key: str = Field(..., description="Google AI Studio API key.")
     gemini_model: str = Field(default="gemini-2.0-flash")
-    embedding_model: str = Field(default="text-embedding-004")
+    embedding_model: str = Field(default="gemini-embedding-001")
 
     # Vector store
     chroma_host: str = Field(default="chroma")

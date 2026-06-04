@@ -192,9 +192,9 @@ async def main() -> None:
     # Fresh ingest each run to keep the corpus consistent.
     await store.reset_collection()
 
-    totals = await asyncio.gather(
-        *(_ingest_paper(p, settings, embeddings, store) for p in PAPERS)
-    )
+    totals: list[int] = []
+    for paper in PAPERS:
+        totals.append(await _ingest_paper(paper, settings, embeddings, store))
     total_count = await store.count()
     logger.info(
         "ingestion_complete",
